@@ -17,7 +17,7 @@ class ProcessStatement:
     def update_mapping(self, log_txt):
         # Two types of word mapping files for allocating categories to your transactions
         # (Specific word maps are directly copied from your past history if you want to run past x
-        # months of transactions. You will have to work on putting this together)
+        # months of transactions.)
         mapping_filename = self.fpg.mapping_file('Category Mapping')
         general_mapping_dict_file = self.fpg.mapping_file('Stored General Maps')
         specific_mapping_dict_file = self.fpg.mapping_file('Stored Specific Maps')
@@ -65,7 +65,7 @@ class ProcessStatement:
         log_txt.write(">> Mapping dict files updated successfully!\n")
 
     def get_raw_bank_statements(self):
-        # You will have to change your bank_ls and account_ls for each bank here
+        # Bank and Account Lists are specified here
         bank_ls = ['Chase', 'DCU', 'Fifth Third']
         raw_statement_df_dict = {}
         for bank in bank_ls:
@@ -80,7 +80,7 @@ class ProcessStatement:
                 key = bank + '-' + each_accnt
                 account_file_ls = [x for x in file_ls if each_accnt in x]
                 acct_file_latest = max(account_file_ls, key=os.path.getctime)
-                # ---- This might or might not be required for your bank ----
+                # This is to read DCU (bank) statements only since it has different file structure than Chase
                 if bank == 'DCU':
                     each_acct_df = pd.read_csv(acct_file_latest, header=3)
                     each_acct_df['Memo'] = each_acct_df['Memo'].fillna(each_acct_df['Description'])
@@ -95,7 +95,7 @@ class ProcessStatement:
         return raw_statement_df_dict
 
     def allocate_category(self, statement_df, bank, accnt_str):
-        # Change your banks and account_str for your accounts
+        # Different accounts have different data structure. This is to process dataframes correctly to allocate category
         if bank == 'Chase':
             description_col = 'Description'
             if accnt_str == '3133' or accnt_str == '2703':
@@ -111,7 +111,6 @@ class ProcessStatement:
 
         key = bank + '-' + accnt_str
 
-        exception_dict = {'ATM CHECK DEPOSIT 04/01 2943 RICHLAND AVE LOUISVILLE KY': 'Tax/Interest'}
         updated_statement_dict = {}
         statement_updated_df = pd.DataFrame()
         for idx, row in statement_df.iterrows():
@@ -145,6 +144,8 @@ class ProcessStatement:
                     category = 'Other'
                     mapping_found = "None. Selected " + category
 
+            # Some transactions are exceptions which are specified and processed here
+            exception_dict = {'ATM CHECK DEPOSIT 04/01 2943 RICHLAND AVE LOUISVILLE KY': 'Tax/Interest'}
             if row[description_col] in list(exception_dict.keys()):
                 category = exception_dict[row[description_col]]
                 mapping_found = 'Exception case mapping'
@@ -156,6 +157,7 @@ class ProcessStatement:
                     category = exception_dict_dcu[row[type_col]]
                     mapping_found = 'DCU Exception case mapping'
 
+            # Keeping the required data from category allocation
             if statement_updated_df.empty:
                 statement_updated_df = pd.DataFrame(
                     data=[[row[post_date_col], row[description_col], row[type_col], row['Amount'], category,
