@@ -31,12 +31,16 @@ class FilePathGenerator:
             file_name = file_path + '\\' + 'Specific Mapping.json'
             return file_name
 
-    def output_file(self, file_type):
+    def output_file(self, file_type, statement_mon_year=None):
         if file_type == 'Combined Statement New':
-            file_name = self.working_dir + '\\' + 'Combined_Statement_' + self.run_date.strftime("%Y-%m-%d") + '.csv'
+            analysis_file_path = self.working_dir + '\\' + 'Analysis'
+            os.makedirs(analysis_file_path, exist_ok=True)
+            file_name = analysis_file_path + '\\' + 'Combined_Statement_' + statement_mon_year + '.csv'
             return file_name
         if file_type == 'Combined Statement All':
-            file_name = self.working_dir + '\\' + 'Combined_Statement_All.csv'
+            analysis_file_path = self.working_dir + '\\' + 'Analysis'
+            os.makedirs(analysis_file_path, exist_ok=True)
+            file_name = analysis_file_path + '\\' + 'Combined_Statement_All.csv'
             return file_name
         if file_type == 'Log':
             log_dir = self.working_dir + '\\' + 'Logs'

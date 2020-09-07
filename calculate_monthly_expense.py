@@ -15,6 +15,9 @@ class ProcessStatement:
         self.specific_categ_dict = None
 
     def update_mapping(self, log_txt):
+        # Two types of word mapping files for allocating categories to your transactions
+        # (Specific word maps are directly copied from your past history if you want to run past x
+        # months of transactions. You will have to work on putting this together)
         mapping_filename = self.fpg.mapping_file('Category Mapping')
         general_mapping_dict_file = self.fpg.mapping_file('Stored General Maps')
         specific_mapping_dict_file = self.fpg.mapping_file('Stored Specific Maps')
@@ -62,6 +65,7 @@ class ProcessStatement:
         log_txt.write(">> Mapping dict files updated successfully!\n")
 
     def get_raw_bank_statements(self):
+        # You will have to change your bank_ls and account_ls for each bank here
         bank_ls = ['Chase', 'DCU', 'Fifth Third']
         raw_statement_df_dict = {}
         for bank in bank_ls:
@@ -76,6 +80,7 @@ class ProcessStatement:
                 key = bank + '-' + each_accnt
                 account_file_ls = [x for x in file_ls if each_accnt in x]
                 acct_file_latest = max(account_file_ls, key=os.path.getctime)
+                # ---- This might or might not be required for your bank ----
                 if bank == 'DCU':
                     each_acct_df = pd.read_csv(acct_file_latest, header=3)
                     each_acct_df['Memo'] = each_acct_df['Memo'].fillna(each_acct_df['Description'])
@@ -83,17 +88,18 @@ class ProcessStatement:
                     each_acct_df['Amount Credit'] = each_acct_df['Amount Credit'].fillna(0)
                     each_acct_df.loc[:, 'Amount'] = each_acct_df['Amount Debit'] + each_acct_df['Amount Credit']
                 else:
-                    each_acct_df = pd.read_csv(acct_file_latest)
+                    each_acct_df = pd.read_csv(acct_file_latest, index_col=False)
                 each_acct_df.loc[:, 'Credit/Debit'] = each_acct_df['Amount'].apply(lambda x:
                                                                                    'Credit' if x > 0 else 'Debit')
                 raw_statement_df_dict.update({key: each_acct_df})
         return raw_statement_df_dict
 
     def allocate_category(self, statement_df, bank, accnt_str):
+        # Change your banks and account_str for your accounts
         if bank == 'Chase':
             description_col = 'Description'
             if accnt_str == '3133' or accnt_str == '2703':
-                post_date_col = 'Post Date'
+                post_date_col = 'Transaction Date'
                 type_col = 'Type'
             elif accnt_str == '3103' or accnt_str == '1862':
                 post_date_col = 'Posting Date'
@@ -141,6 +147,14 @@ class ProcessStatement:
 
             if row[description_col] in list(exception_dict.keys()):
                 category = exception_dict[row[description_col]]
+                mapping_found = 'Exception case mapping'
+
+            if bank == 'DCU':
+                exception_dict_dcu = {'TRANSFER TO LOAN 141': 'Auto Loan', 'TRANSFER FROM ACCT 1': 'Bank Transfers',
+                                      'TRANSFER TO ACCT 2': 'Bank Transfers'}
+                if row[type_col] in list(exception_dict_dcu.keys()):
+                    category = exception_dict_dcu[row[type_col]]
+                    mapping_found = 'DCU Exception case mapping'
 
             if statement_updated_df.empty:
                 statement_updated_df = pd.DataFrame(
@@ -168,13 +182,15 @@ class MultiprocessStatements:
         self.result.update(result)
 
 
-def main(run_date):
+def main(run_date, statement_mon_year):
     run_date_str = run_date.strftime("%Y-%m-%d")
     fpg = FilePathGenerator(run_date)
     log_file = fpg.output_file('Log') + '\\' + 'Log_' + run_date_str + '.log'
     log_txt = open(log_file, 'w')
-
+    print("-----------Running for" + statement_mon_year + "-------------")
+    log_txt.write("-----------Running for" + statement_mon_year + "-------------\n")
     statement_processor = ProcessStatement(fpg)
+    print(">> Updating mapping file.....")
     log_txt.write(">> Updating mapping file.....\n")
     statement_processor.update_mapping(log_txt)
     cores = mp.cpu_count()
@@ -182,7 +198,10 @@ def main(run_date):
     statement_multiprocessor = MultiprocessStatements()
 
     log_txt.write(">> Get Raw bank statements....\n")
+    print(">> Get Raw bank statements....")
     raw_statement_df_dict = statement_processor.get_raw_bank_statements()
+    print(">> Raw Bank Statements fetched successfully")
+    print(">> Updating categories for all bank statements using parallel processing")
     log_txt.write(">> Raw Bank Statements fetched successfully\n")
     log_txt.write(">> Updating categories for all bank statements using parallel processing\n")
     for key, each_acct_raw_df in raw_statement_df_dict.items():
@@ -200,7 +219,8 @@ def main(run_date):
                          callback=statement_multiprocessor.collect_results)
     pool.close()
     pool.join()
-    log_txt.write(">> Updated all statements successfully\n")
+    print(">> Updated all statements successfully!")
+    log_txt.write(">> Updated all statements successfully!\n")
 
     updated_bank_stat_dict = statement_multiprocessor.result
     combined_new_bank_statement = pd.DataFrame()
@@ -212,11 +232,7 @@ def main(run_date):
 
     all_statement_combined_filename = fpg.output_file('Combined Statement All')
     if os.path.isfile(all_statement_combined_filename):
-        all_statement_combined_df = pd.read_csv(all_statement_combined_filename)
-        all_statement_combined_df = all_statement_combined_df.append(combined_new_bank_statement, sort=False)
-        all_statement_combined_df = all_statement_combined_df.drop_duplicates()
-        all_statement_combined_df.to_csv(all_statement_combined_filename, index=False)
-        combined_new_bank_statement.to_csv(fpg.output_file('Combined Statement New'), index=False)
+        combined_new_bank_statement.to_csv(fpg.output_file('Combined Statement New', statement_mon_year), index=False)
     else:
         combined_new_bank_statement.to_csv(fpg.output_file('Combined Statement All'), index=False)
 
@@ -225,7 +241,25 @@ def main(run_date):
     log_txt.close()
 
 
+def combine_statement_all(file_name_generator, statement_mon_year):
+    all_statement_combined_filename = file_name_generator.output_file('Combined Statement All')
+    combined_new_statement_filename = file_name_generator.output_file('Combined Statement New', statement_mon_year)
+    if os.path.isfile(all_statement_combined_filename) and os.path.isfile(combined_new_statement_filename):
+        all_statement_combined_df = pd.read_csv(all_statement_combined_filename)
+        combined_new_bank_statement = pd.read_csv(combined_new_statement_filename)
+        all_statement_combined_df = all_statement_combined_df.append(combined_new_bank_statement, sort=False)
+        all_statement_combined_df = all_statement_combined_df.drop_duplicates()
+        all_statement_combined_df.to_csv(all_statement_combined_filename, index=False)
+        print(">> Combined Statement file generated successfully!")
+    else:
+        print(">> Combined Statement file not generated!")
+
+
 if __name__ == "__main__":
     run_date = datetime.datetime.today()
-    main(run_date)
-    print("End of Run")
+    statement_mon_year = 'Aug_2020'
+    # main(run_date, statement_mon_year)
+    # print("End of Run")
+
+    file_generator = FilePathGenerator(run_date)
+    combine_statement_all(file_generator, statement_mon_year)
