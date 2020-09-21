@@ -1,7 +1,7 @@
 # personal-finance
 Assign categories to all income/expenses
 
-My transactions occur with accounts in 2 banks - credit cards/ checking/ savigns accounts. 
+My transactions occur with accounts in 2 banks - credit cards/ checking/ savings accounts. 
 The purpose of this code is to run it every month to assign categories to my transactions.
 
 A lof of my transactions happen at regular places so I have created two word mapping files which is basically to lookup a word/string and match it to the right category.
@@ -17,6 +17,6 @@ Steps -
 3) Update the code to read your bank statements correctly. (I have specific numbers as identification for different accounts. You can use yours)
 3) Run the code!
 
-This isn't right out of the box code so you will have to make quite some of changes according to your bank statements!
+This isn't right out of the box code so you will have to make quite some changes according to your bank statements!
 
-I will try to add some comments where change will be required in the code.
+I will try to add some comments where changes will be required in the code.
