@@ -14,7 +14,7 @@ Steps -
 
 1) Download the bank statements.
 2) Update your category mapping files.
-3) Update the code to read your bank statements correctly. (I have specific numbers as identification for different accounts. You can use yours)
+3) Update the code to read your bank statements correctly. (I have specific numbers as identification for different accounts. You can use yours) (ONE TIME ONLY)
 3) Run the code!
 
 This isn't right out of the box code so you will have to make quite some changes according to your bank statements!
