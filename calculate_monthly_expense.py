@@ -259,9 +259,9 @@ def combine_statement_all(file_name_generator, statement_mon_year):
 
 if __name__ == "__main__":
     run_date = datetime.datetime.today()
-    statement_mon_year = 'Aug_2020'
-    # main(run_date, statement_mon_year)
-    # print("End of Run")
+    statement_mon_year = 'Sep_2020'
+    main(run_date, statement_mon_year)
+    print("End of Run")
 
-    file_generator = FilePathGenerator(run_date)
-    combine_statement_all(file_generator, statement_mon_year)
+    # file_generator = FilePathGenerator(run_date)
+    # combine_statement_all(file_generator, statement_mon_year)
