@@ -5,7 +5,7 @@ import datetime
 
 class FilePathGenerator:
     def __init__(self, run_date):
-        self.working_dir = r'C:\Dhruv\Project Data\Personal Finance'
+        self.working_dir = r'D:\Personal Finance'
         self.log_dir = self.working_dir + '\\' + 'log'
         self.run_date = run_date
 
